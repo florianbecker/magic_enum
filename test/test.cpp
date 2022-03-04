@@ -34,11 +34,11 @@
 #include <string_view>
 #include <sstream>
 
-enum class Color { RED = -12, GREEN = 7, BLUE = 15 };
+enum class Color { RED = -12, INVALID = 0, GREEN = 7, BLUE = 15 };
 
 enum class Numbers : int { one = 1, two, three, many = 127 };
 
-enum Directions { Up = 85, Down = -42, Right = 120, Left = -120 };
+enum Directions { Up = 85, Down = -42, Right = 120, Left = -120, Nowhere = 1, Somewhere = -1 };
 
 #if defined(MAGIC_ENUM_ENABLE_NONASCII)
 enum class Language : int { 日本語 = 10, 한국어 = 20, English = 30, 😃 = 40 };
@@ -93,6 +93,23 @@ constexpr std::string_view magic_enum::customize::enum_name<Color>(Color value) 
       return {};
   }
 }
+
+template <>
+constexpr bool magic_enum::customize::enum_is_valid<Color>(Color value) noexcept {
+  return value != Color::INVALID;
+}
+
+template <>
+constexpr bool magic_enum::customize::enum_is_valid<Directions>(Directions value) noexcept {
+    switch (value) {
+        case Directions::Nowhere:
+        case Directions::Somewhere:
+            return false;
+        default:
+            return true;
+    }
+}
+
 
 using namespace magic_enum;
 

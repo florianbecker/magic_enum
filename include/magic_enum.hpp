@@ -142,6 +142,13 @@ constexpr string_view enum_name(E) noexcept {
   return {};
 }
 
+// If need disable enum values, add specialization enum_is_valid for necessary enum type.
+// This function is only a pre-check. If enum values has no name, enum remains invalid.
+template <typename E>
+constexpr bool enum_is_valid(E) noexcept {
+    return true;
+}
+
 } // namespace magic_enum::customize
 
 namespace detail {
@@ -355,23 +362,27 @@ inline constexpr auto type_name_v = n<E>();
 template <typename E, E V>
 constexpr auto n() noexcept {
   static_assert(is_enum_v<E>, "magic_enum::detail::n requires enum type.");
-  [[maybe_unused]] constexpr auto custom_name = customize::enum_name<E>(V);
-
-  if constexpr (custom_name.empty()) {
-    if constexpr (supported<E>::value) {
-#if defined(__clang__) || defined(__GNUC__)
-      constexpr auto name = pretty_name({__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__) - 2});
-#elif defined(_MSC_VER)
-      constexpr auto name = pretty_name({__FUNCSIG__, sizeof(__FUNCSIG__) - 17});
-#else
-      constexpr auto name = string_view{};
-#endif
-      return static_string<name.size()>{name};
-    } else {
-      return string_view{}; // Unsupported compiler.
-    }
+  if constexpr (!customize::enum_is_valid<E>(V)) {
+      return string_view{};
   } else {
-    return static_string<custom_name.size()>{custom_name};
+    [[maybe_unused]] constexpr auto custom_name = customize::enum_name<E>(V);
+
+    if constexpr (custom_name.empty()) {
+      if constexpr (supported<E>::value) {
+#if defined(__clang__) || defined(__GNUC__)
+        constexpr auto name = pretty_name({__PRETTY_FUNCTION__, sizeof(__PRETTY_FUNCTION__) - 2});
+#elif defined(_MSC_VER)
+        constexpr auto name = pretty_name({__FUNCSIG__, sizeof(__FUNCSIG__) - 17});
+#else
+        constexpr auto name = string_view{};
+#endif
+        return static_string<name.size()>{name};
+      } else {
+        return string_view{}; // Unsupported compiler.
+      }
+    } else {
+      return static_string<custom_name.size()>{custom_name};
+    }
   }
 }
 

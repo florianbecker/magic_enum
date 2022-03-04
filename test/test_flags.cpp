@@ -46,6 +46,7 @@ enum class Numbers : int {
   two = 1 << 2,
   three = 1 << 3,
   many = 1 << 30,
+  some_frequently_used_value = one | two | three,
 };
 
 enum Directions : std::uint64_t {
@@ -82,6 +83,11 @@ struct magic_enum::customize::enum_range<number> {
   static constexpr int min = 100;
   static constexpr int max = 300;
 };
+
+template <>
+constexpr bool magic_enum::customize::enum_is_valid<Numbers>(Numbers value) noexcept {
+    return value != Numbers::some_frequently_used_value;
+}
 
 using namespace magic_enum;
 using namespace magic_enum::bitwise_operators;
