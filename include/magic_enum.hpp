@@ -526,13 +526,13 @@ template <typename E>
 inline constexpr bool is_flags_v = is_flags_enum<E>();
 
 template <typename E>
-inline constexpr std::array values_v = values<E, is_flags_v<E>>();
+inline constexpr decltype(values<E, is_flags_v<E>>()) values_v = values<E, is_flags_v<E>>();
 
 template <typename E, typename D = std::decay_t<E>>
 using values_t = decltype((values_v<D>));
 
 template <typename E>
-inline constexpr auto count_v = values_v<E>.size();
+inline constexpr std::size_t count_v = values_v<E>.size();
 
 template <typename E, typename U = std::underlying_type_t<E>>
 inline constexpr auto min_v = (count_v<E> > 0) ? static_cast<U>(values_v<E>.front()) : U{0};
@@ -548,7 +548,7 @@ constexpr auto names(std::index_sequence<I...>) noexcept {
 }
 
 template <typename E>
-inline constexpr std::array names_v = names<E>(std::make_index_sequence<count_v<E>>{});
+inline constexpr decltype(names<E>(std::make_index_sequence<count_v<E>>{})) names_v = names<E>(std::make_index_sequence<count_v<E>>{});
 
 template <typename E, typename D = std::decay_t<E>>
 using names_t = decltype((names_v<D>));
