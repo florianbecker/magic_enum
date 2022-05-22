@@ -84,35 +84,35 @@
 #  define MAGIC_ENUM_SUPPORTED_ALIASES 1
 #endif
 
-// Enum value must be greater or equals than MAGIC_ENUM_RANGE_MIN. By default MAGIC_ENUM_RANGE_MIN = -128.
-// If need another min range for all enum types by default, redefine the macro MAGIC_ENUM_RANGE_MIN.
+// Enum value must be greater or equals than MAGIC_ENUM_RANGE_MIN. By default, MAGIC_ENUM_RANGE_MIN = -128.
+// If you need another min range for all enum types by default, redefine the macro MAGIC_ENUM_RANGE_MIN.
 #if !defined(MAGIC_ENUM_RANGE_MIN)
 #  define MAGIC_ENUM_RANGE_MIN -128
 #endif
 
-// Enum value must be less or equals than MAGIC_ENUM_RANGE_MAX. By default MAGIC_ENUM_RANGE_MAX = 128.
-// If need another max range for all enum types by default, redefine the macro MAGIC_ENUM_RANGE_MAX.
+// Enum value must be less or equals than MAGIC_ENUM_RANGE_MAX. By default, MAGIC_ENUM_RANGE_MAX = 128.
+// If you need another max range for all enum types by default, redefine the macro MAGIC_ENUM_RANGE_MAX.
 #if !defined(MAGIC_ENUM_RANGE_MAX)
 #  define MAGIC_ENUM_RANGE_MAX 128
 #endif
 
 namespace magic_enum {
 
-// If need another optional type, define the macro MAGIC_ENUM_USING_ALIAS_OPTIONAL.
+// If you need another optional type, define the macro MAGIC_ENUM_USING_ALIAS_OPTIONAL.
 #if defined(MAGIC_ENUM_USING_ALIAS_OPTIONAL)
 MAGIC_ENUM_USING_ALIAS_OPTIONAL
 #else
 using std::optional;
 #endif
 
-// If need another string_view type, define the macro MAGIC_ENUM_USING_ALIAS_STRING_VIEW.
+// If you need another string_view type, define the macro MAGIC_ENUM_USING_ALIAS_STRING_VIEW.
 #if defined(MAGIC_ENUM_USING_ALIAS_STRING_VIEW)
 MAGIC_ENUM_USING_ALIAS_STRING_VIEW
 #else
 using std::string_view;
 #endif
 
-// If need another string type, define the macro MAGIC_ENUM_USING_ALIAS_STRING.
+// If you need another string type, define the macro MAGIC_ENUM_USING_ALIAS_STRING.
 #if defined(MAGIC_ENUM_USING_ALIAS_STRING)
 MAGIC_ENUM_USING_ALIAS_STRING
 #else
@@ -121,9 +121,9 @@ using std::string;
 
 namespace customize {
 
-// Enum value must be in range [MAGIC_ENUM_RANGE_MIN, MAGIC_ENUM_RANGE_MAX]. By default MAGIC_ENUM_RANGE_MIN = -128, MAGIC_ENUM_RANGE_MAX = 128.
-// If need another range for all enum types by default, redefine the macro MAGIC_ENUM_RANGE_MIN and MAGIC_ENUM_RANGE_MAX.
-// If need another range for specific enum type, add specialization enum_range for necessary enum type.
+// Enum value must be in range [MAGIC_ENUM_RANGE_MIN, MAGIC_ENUM_RANGE_MAX]. By default, MAGIC_ENUM_RANGE_MIN = -128, MAGIC_ENUM_RANGE_MAX = 128.
+// If you need another range for all enum types by default, redefine the macro MAGIC_ENUM_RANGE_MIN and MAGIC_ENUM_RANGE_MAX.
+// If you need another range for specific enum type, add specialization enum_range for necessary enum type.
 template <typename E>
 struct enum_range {
   static_assert(std::is_enum_v<E>, "magic_enum::customize::enum_range requires enum type.");
@@ -147,13 +147,13 @@ inline constexpr auto default_tag = detail::default_customize_tag{};
 // Invalid customize.
 inline constexpr auto invalid_tag = detail::invalid_customize_tag{};
 
-// If need custom names for enum, add specialization enum_name for necessary enum type.
+// If you need custom names for enum, add specialization enum_name for necessary enum type.
 template <typename E>
 constexpr customize_t enum_name(E) noexcept {
   return default_tag;
 }
 
-// If need custom type name for enum, add specialization enum_type_name for necessary enum type.
+// If you need custom type name for enum, add specialization enum_type_name for necessary enum type.
 template <typename E>
 constexpr customize_t enum_type_name() noexcept {
   return default_tag;
@@ -202,9 +202,9 @@ class static_string {
     assert(str.size() == N);
   }
 
-  constexpr const char* data() const noexcept { return chars_; }
+  [[nodiscard]] constexpr const char* data() const noexcept { return chars_; }
 
-  constexpr std::size_t size() const noexcept { return N; }
+  [[nodiscard]] constexpr std::size_t size() const noexcept { return N; }
 
   constexpr operator string_view() const noexcept { return {data(), size()}; }
 
@@ -222,9 +222,9 @@ class static_string<0> {
 
   constexpr explicit static_string(string_view) noexcept {}
 
-  constexpr const char* data() const noexcept { return nullptr; }
+  [[nodiscard]] static constexpr const char* data() noexcept { return nullptr; }
 
-  constexpr std::size_t size() const noexcept { return 0; }
+  [[nodiscard]] static constexpr std::size_t size() noexcept { return 0; }
 
   constexpr operator string_view() const noexcept { return {}; }
 };
@@ -243,8 +243,8 @@ constexpr string_view pretty_name(string_view name) noexcept {
     }
   }
 
-  if (name.size() > 0 && ((name.front() >= 'a' && name.front() <= 'z') ||
-                          (name.front() >= 'A' && name.front() <= 'Z') ||
+  if (!name.empty() && ((name.front() >= 'a' && name.front() <= 'z') ||
+                        (name.front() >= 'A' && name.front() <= 'Z') ||
 #if defined(MAGIC_ENUM_ENABLE_NONASCII)
                           (name.front() & 0x80) ||
 #endif
@@ -272,15 +272,16 @@ class case_insensitive {
   }
 };
 
-constexpr std::size_t find(string_view str, char c) noexcept {
+template<bool workaround =
 #if defined(__clang__) && __clang_major__ < 9 && defined(__GLIBCXX__) || defined(_MSC_VER) && _MSC_VER < 1920 && !defined(__clang__)
 // https://stackoverflow.com/questions/56484834/constexpr-stdstring-viewfind-last-of-doesnt-work-on-clang-8-with-libstdc
 // https://developercommunity.visualstudio.com/content/problem/360432/vs20178-regression-c-failed-in-test.html
-  constexpr bool workaround = true;
+  true
 #else
-  constexpr bool workaround = false;
+  false
 #endif
-
+>
+constexpr std::size_t find(string_view str, char c) noexcept {
   if constexpr (workaround) {
     for (std::size_t i = 0; i < str.size(); ++i) {
       if (str[i] == c) {
@@ -311,16 +312,16 @@ constexpr bool is_nothrow_invocable() {
          std::is_nothrow_invocable_r_v<bool, BinaryPredicate, char, char>;
 }
 
-template <typename BinaryPredicate>
-constexpr bool cmp_equal(string_view lhs, string_view rhs, [[maybe_unused]] BinaryPredicate&& p) noexcept(is_nothrow_invocable<BinaryPredicate>()) {
+template <typename BinaryPredicate, bool workaround =
 #if defined(_MSC_VER) && _MSC_VER < 1920 && !defined(__clang__)
-  // https://developercommunity.visualstudio.com/content/problem/360432/vs20178-regression-c-failed-in-test.html
-  // https://developercommunity.visualstudio.com/content/problem/232218/c-constexpr-string-view.html
-  constexpr bool workaround = true;
+// https://developercommunity.visualstudio.com/content/problem/360432/vs20178-regression-c-failed-in-test.html
+// https://developercommunity.visualstudio.com/content/problem/232218/c-constexpr-string-view.html
+  true
 #else
-  constexpr bool workaround = false;
+  false
 #endif
-
+>
+constexpr bool cmp_equal(string_view lhs, string_view rhs, [[maybe_unused]] BinaryPredicate&& p) noexcept(is_nothrow_invocable<BinaryPredicate>()) {
   if constexpr (!is_default_predicate<BinaryPredicate>() || workaround) {
     if (lhs.size() != rhs.size()) {
       return false;
@@ -614,9 +615,7 @@ template <typename E, typename U = std::underlying_type_t<E>>
 constexpr bool is_sparse() noexcept {
   static_assert(is_enum_v<E>, "magic_enum::detail::is_sparse requires enum type.");
 
-  if constexpr (count_v<E> == 0) {
-    return false;
-  } else if constexpr (std::is_same_v<U, bool>) { // bool special case
+  if constexpr (count_v<E> == 0 || std::is_same_v<U, bool>) { // bool special case
     return false;
   } else {
     constexpr auto max = is_flags_v<E> ? log2(max_v<E>) : max_v<E>;
@@ -688,7 +687,7 @@ struct constexpr_hash_t<Value, std::enable_if_t<is_enum_v<Value>>> {
       return static_cast<U>(value);
     }
   }
-  using secondary_hash = constexpr_hash_t;
+  using secondary_hash [[maybe_unused]] = constexpr_hash_t;
 };
 
 template <typename Value>
@@ -735,7 +734,7 @@ struct constexpr_hash_t<Value, std::enable_if_t<std::is_same_v<Value, string_vie
     return crc ^ 0xffffffffL;
   }
 
-  struct secondary_hash {
+  struct [[maybe_unused]] secondary_hash {
     constexpr std::uint32_t operator()(string_view value) const noexcept {
       auto acc = static_cast<std::uint64_t>(2166136261ULL);
       for (const auto c : value) {
@@ -913,8 +912,8 @@ struct is_unscoped_enum : detail::is_unscoped_enum<T> {};
 template <typename T>
 inline constexpr bool is_unscoped_enum_v = is_unscoped_enum<T>::value;
 
-// Checks whether T is an Scoped enumeration type.
-// Provides the member constant value which is equal to true, if T is an [Scoped enumeration](https://en.cppreference.com/w/cpp/language/enum#Scoped_enumerations) type. Otherwise, value is equal to false.
+// Checks whether T is a Scoped enumeration type.
+// Provides the member constant value which is equal to true, if T is a [Scoped enumeration](https://en.cppreference.com/w/cpp/language/enum#Scoped_enumerations) type. Otherwise, value is equal to false.
 template <typename T>
 struct is_scoped_enum : detail::is_scoped_enum<T> {};
 
@@ -986,7 +985,7 @@ template <typename E>
 
 // Returns underlying value from enum value.
 template <typename E>
-[[nodiscard]] constexpr auto enum_underlying(E value) noexcept -> detail::enable_if_t<E, underlying_type_t<E>> {
+[[maybe_unused]] [[nodiscard]] constexpr auto enum_underlying(E value) noexcept -> detail::enable_if_t<E, underlying_type_t<E>> {
   return static_cast<underlying_type_t<E>>(value);
 }
 
