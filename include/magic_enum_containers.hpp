@@ -419,6 +419,7 @@ public:
   [[nodiscard]] friend constexpr bool operator!=( const pair& lhs, const pair& rhs ) {
     return lhs.first != rhs.first || lhs.second != rhs.second;
   }
+
   [[nodiscard]] friend constexpr bool operator<( const pair& lhs, const pair& rhs ) {
     if (lhs.first < rhs.first) return true;
     if (rhs.first < lhs.first) return false;
@@ -1422,8 +1423,8 @@ public:
   using const_reference = const value_type&;
   using pointer = value_type*;
   using const_pointer = const value_type*;
-  using iterator = detail::FilteredIterator<map*, optional_wrap*, Getter, Predicate>;
-  using const_iterator = detail::FilteredIterator<const map*, const optional_wrap*, Getter, Predicate>;
+  using iterator = detail::FilteredIterator<map*, typename container_type::value_type*, Getter, Predicate>;
+  using const_iterator = detail::FilteredIterator<const map*, const typename container_type::value_type*, Getter, Predicate>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -1437,16 +1438,14 @@ public:
 
   template< class InputIt >
   constexpr map(InputIt first, InputIt last) {
-    while(first != last)
-      insert(*first++);
+    insert(first, last);
   }
 
   constexpr map(const map& other) noexcept(std::is_nothrow_copy_constructible_v<mapped_type>) = default;
   constexpr map(map&& other) noexcept(std::is_nothrow_move_constructible_v<mapped_type>) = default;
 
   constexpr map(std::initializer_list<value_type> init) noexcept(std::is_nothrow_copy_constructible_v<mapped_type>) {
-    for (auto& v : init)
-      insert(v);
+    insert(init);
   }
 
   constexpr map& operator=(const map& other) noexcept(std::is_nothrow_copy_assignable_v<mapped_type>) = default;
