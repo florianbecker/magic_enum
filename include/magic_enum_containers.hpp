@@ -251,6 +251,17 @@ namespace detail {
     constexpr FilteredIterator& operator=(const FilteredIterator&) = default;
     constexpr FilteredIterator(FilteredIterator&&) noexcept = default;
     constexpr FilteredIterator& operator=(FilteredIterator&&) noexcept = default;
+
+    template<typename OtherParent, typename OtherIterator, typename = std::enable_if_t<std::is_convertible_v<OtherParent, Parent> && std::is_convertible_v<OtherIterator, Iterator>>*>
+    constexpr FilteredIterator(const FilteredIterator<OtherParent, OtherIterator, Getter, Predicate>& other)
+      : parent(other.parent)
+      , first(other.first)
+      , last(other.last)
+      , current(other.current)
+      , getter(other.getter)
+      , predicate(other.predicate)
+    {}
+
     ~FilteredIterator() = default;
 
     constexpr FilteredIterator(Parent p, Iterator begin, Iterator end, Iterator curr, Getter getter = {}, Predicate pred = {})
@@ -323,6 +334,129 @@ using default_indexing = detail::indexing<E>;
 template<typename Cmp = std::less<>>
 using comparator_indexing [[maybe_unused]] = detail::indexing<void, Cmp>;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                          PAIR                                                             //
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename T1, typename T2>
+struct pair {
+
+private:
+  template<typename... Args1, typename... Args2, std::size_t ...Ix1, std::size_t ...Ix2>
+  constexpr pair(std::tuple<Args1...> first_args,
+                 std::tuple<Args2...> second_args,
+                 std::index_sequence<Ix1...>,
+                 std::index_sequence<Ix2...>)
+    : first(std::forward<Args1>(std::get<Ix1>(first_args))...)
+    , second(std::forward<Args2>(std::get<Ix2>(second_args))...)
+  {}
+public:
+  constexpr pair() noexcept = default;
+  constexpr pair( const T1& x, const T2& y )
+    : first(x)
+    , second(y)
+  {}
+
+  template<typename U1 = T1, typename U2 = T2 >
+  constexpr pair( U1&& x, U2&& y )
+    : first(std::forward<U1>(x))
+    , second(std::forward<U2>(y))
+  {}
+
+  template<typename U1, typename U2, typename = std::enable_if_t<std::is_constructible_v<T1, U1&> && std::is_constructible_v<T2, U2&>>>
+  explicit constexpr pair( pair<U1, U2>& p )
+    : first(p.first)
+    , second(p.second)
+  {}
+
+  template<typename U1, typename U2, typename = std::enable_if_t<std::is_constructible_v<T1, const U1&> && std::is_constructible_v<T2, const U2&>>>
+  explicit constexpr pair( const pair<U1, U2>& p )
+    : first(p.first)
+    , second(p.second)
+  {}
+
+  template<typename U1, typename U2, typename = std::enable_if_t<std::is_constructible_v<T1, U1> && std::is_constructible_v<T2, U2>>>
+  explicit constexpr pair( pair<U1, U2>&& p )
+    : first(std::forward<U1>(p.first))
+    , second(std::forward<U2>(p.second))
+  {}
+
+  template<typename U1, typename U2, typename = std::enable_if_t<std::is_constructible_v<T1, U1> && std::is_constructible_v<T2, U2>>>
+  explicit constexpr pair( const pair<U1, U2>&& p )
+    : first(p.first)
+    , second(p.second)
+  {}
+
+  template<typename... Args1, typename... Args2>
+  constexpr pair(std::piecewise_construct_t,
+                 std::tuple<Args1...> first_args,
+                 std::tuple<Args2...> second_args)
+    : pair(std::move(first_args), std::move(second_args), std::index_sequence_for<Args1...>{}, std::index_sequence_for<Args2...>{})
+  {}
+
+  constexpr pair( const pair& p ) noexcept(std::is_nothrow_copy_constructible_v<T1> && std::is_nothrow_copy_constructible_v<T2>) = default;
+  constexpr pair( pair&& p ) noexcept(std::is_nothrow_move_constructible_v<T1> && std::is_nothrow_move_constructible_v<T2>) = default;
+
+  constexpr pair& operator=( const pair& other ) noexcept(std::is_nothrow_copy_assignable_v<T1> && std::is_nothrow_copy_assignable_v<T2>) = default;
+  constexpr pair& operator=( pair&& other ) noexcept(std::is_nothrow_move_assignable_v<T1> && std::is_nothrow_move_assignable_v<T2>) = default;
+
+  template<typename U1, typename U2>
+  constexpr std::enable_if_t<std::is_assignable_v<T1, const U1&> && std::is_assignable_v<T2, const U2&>, pair&> operator=( const pair<U1, U2>& other ) {
+    first = other.first;
+    second = other.second;
+    return *this;
+  }
+
+  template<typename U1, typename U2>
+  constexpr std::enable_if_t<std::is_assignable_v<T1, U1&&> && std::is_assignable_v<T2, U2&&>, pair&> operator=( pair<U1, U2>&& other ) {
+    first = std::forward<U1>(other.first);
+    second = std::forward<U2>(other.second);
+    return *this;
+  }
+
+  constexpr void swap( pair& other ) noexcept(std::is_nothrow_swappable_v<T1> && std::is_nothrow_swappable_v<T2>) {
+    T1 cp1 = std::move(first);
+    first = std::move(other.first);
+    other.first = std::move(cp1);
+
+    T2 cp2 = std::move(second);
+    second = std::move(other.second);
+    other.second = std::move(cp2);
+  }
+
+  [[nodiscard]] friend constexpr bool operator==( const pair& lhs, const pair& rhs ) {
+    return lhs.first == rhs.first && lhs.second == rhs.second;
+  }
+
+  [[nodiscard]] friend constexpr bool operator!=( const pair& lhs, const pair& rhs ) {
+    return lhs.first != rhs.first || lhs.second != rhs.second;
+  }
+  [[nodiscard]] friend constexpr bool operator<( const pair& lhs, const pair& rhs ) {
+    if (lhs.first < rhs.first) return true;
+    if (rhs.first < lhs.first) return false;
+    if (lhs.second < rhs.second) return true;
+    return false;
+  }
+
+  [[nodiscard]] friend constexpr bool operator<=( const pair& lhs, const pair& rhs ) {
+    return !(rhs < lhs);
+  }
+
+  [[nodiscard]] friend constexpr bool operator>( const pair& lhs, const pair& rhs ) {
+    return rhs < lhs;
+  }
+
+  [[nodiscard]] friend constexpr bool operator>=( const pair& lhs, const pair& rhs ) {
+    return !(lhs < rhs);
+  }
+
+  T1 first;
+  T2 second;
+};
+
+template<typename T1, typename T2>
+constexpr std::pair<std::decay_t<T1>,std::decay_t<T2>> make_pair( T1&& t, T2&& u ) {
+  return {std::forward<T1>(t), std::forward<T2>(u)};
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                          ARRAY                                                            //
@@ -1237,6 +1371,467 @@ private:
   std::size_t s{};
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                           MAP                                                             //
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename E, typename V, typename CExprLess = std::less<E>>
+class map {
+  using index_type = detail::indexing<E, CExprLess>;
+  struct Getter {
+    template<typename VT>
+    constexpr decltype(auto) operator()(const map*, VT* v) const noexcept {
+      return **v;
+    }
+  };
+  struct Predicate {
+    template<typename VT>
+    constexpr bool operator()(const map*, VT* v) const noexcept {
+      return *v;
+    }
+  };
+
+  struct optional_wrap {
+    union U {
+      std::uint8_t u;
+      std::pair<E, V> p;
+
+      constexpr U() noexcept : u{} {}
+
+      constexpr U(const U&) = default;
+
+      constexpr U& operator=(U&&) = default;
+
+      template<typename T, typename ...Ts>
+      constexpr U(T&& t, Ts&&... ts) : p{std::forward<T>(t), std::forward<Ts>(ts)...} {}
+    } uni;
+
+    bool constructed{};
+
+    constexpr bool operator!() const {
+      return !constructed;
+    }
+
+    constexpr operator bool() const {
+      return constructed;
+    }
+
+    template<typename ...Ts>
+    constexpr void create(Ts&& ... ts) {
+      constructed = true;
+      uni = U(std::forward<Ts>(ts)...);
+    }
+  };
+public:
+  using key_type = E;
+  using mapped_type = V;
+  using value_type = pair<key_type, mapped_type>;
+  using container_type = array<key_type, optional_wrap, index_type>;
+  using size_type = typename container_type::size_type;
+  using difference_type = typename container_type::difference_type;
+  using key_compare = CExprLess;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using pointer = value_type*;
+  using const_pointer = const value_type*;
+  using iterator = detail::FilteredIterator<map*, optional_wrap*, Getter, Predicate>;
+  using const_iterator = detail::FilteredIterator<const map*, const optional_wrap*, Getter, Predicate>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  struct value_compare {
+    [[nodiscard]] constexpr bool operator()( const value_type& lhs, const value_type& rhs ) const noexcept {
+      return key_compare{}(lhs.first, rhs.first);
+    }
+  };
+
+  constexpr map() noexcept(std::is_nothrow_constructible_v<mapped_type>) = default;
+
+  template< class InputIt >
+  constexpr map(InputIt first, InputIt last) {
+    while(first != last)
+      insert(*first++);
+  }
+
+  constexpr map(const map& other) noexcept(std::is_nothrow_copy_constructible_v<mapped_type>) = default;
+  constexpr map(map&& other) noexcept(std::is_nothrow_move_constructible_v<mapped_type>) = default;
+
+  constexpr map(std::initializer_list<value_type> init) noexcept(std::is_nothrow_copy_constructible_v<mapped_type>) {
+    for (auto& v : init)
+      insert(v);
+  }
+
+  constexpr map& operator=(const map& other) noexcept(std::is_nothrow_copy_assignable_v<mapped_type>) = default;
+  constexpr map& operator=(map&& other) noexcept(std::is_nothrow_move_assignable_v<mapped_type>) = default;
+
+  constexpr map& operator=(std::initializer_list<value_type> ilist) noexcept(std::is_nothrow_constructible_v<mapped_type> &&
+                                                                             std::is_nothrow_copy_assignable_v<mapped_type>) {
+    *this = map(ilist);
+  }
+
+  constexpr mapped_type & at( const key_type & key ) {
+    if (auto i = index_type{}(key))
+      if (auto& o = a.a[*i])
+        return *o;
+
+    throw std::out_of_range("enum map::at element not found");
+  }
+
+  constexpr const mapped_type & at( const key_type & key ) const {
+    if (auto i = index_type{}(key))
+      if (auto& o = a.a[*i])
+        return *o;
+
+    throw std::out_of_range("enum map::at element not found");
+  }
+
+  constexpr mapped_type & operator[](const key_type& key) {
+    auto& o = a.a[*index_type{}(key)];
+    if (!o) {
+      o = optional<value_type>{{key, mapped_type{}}};
+    }
+    return o->second;
+  }
+
+  constexpr mapped_type & operator[](key_type&& key) {
+    return (*this)[key];
+  }
+
+  [[nodiscard]] constexpr iterator begin() noexcept {
+    return {this, a.begin(), a.end(), a.begin()};
+  }
+
+  [[nodiscard]] constexpr const_iterator begin() const noexcept {
+    return {this, a.begin(), a.end(), a.begin()};
+  }
+
+  [[nodiscard]] constexpr const_iterator cbegin() const noexcept {
+    return {this, a.begin(), a.end(), a.begin()};
+  }
+
+  [[nodiscard]] constexpr iterator end() noexcept {
+    return {this, a.begin(), a.end(), a.end()};
+  }
+
+  [[nodiscard]] constexpr const_iterator end() const noexcept {
+    return {this, a.begin(), a.end(), a.end()};
+  }
+
+  [[nodiscard]] constexpr const_iterator cend() const noexcept {
+    return {this, a.begin(), a.end(), a.end()};
+  }
+
+  [[nodiscard]] constexpr bool empty() const noexcept {
+    return s == 0;
+  }
+
+  [[nodiscard]] constexpr size_type size() const noexcept {
+    return s;
+  }
+
+  [[nodiscard]] constexpr size_type max_size() const noexcept {
+    return a.max_size();
+  }
+
+  constexpr void clear() noexcept {
+    for (auto& o : a.a) {
+      o = optional<value_type>{};
+    }
+    s = 0;
+  }
+
+  constexpr std::pair<iterator, bool> insert( const value_type& value ) {
+    if (auto i = index_type{}(value.first)) {
+      auto& o = a.a[*i];
+      bool newly = !o;
+      if (newly) {
+        o = optional{value};
+        ++s;
+      }
+      return {iterator{this, a.begin(), a.end(), &o}, newly};
+    }
+    return {end(), false};
+  }
+
+  constexpr std::pair<iterator, bool> insert( value_type&& value ) noexcept {
+    if (auto i = index_type{}(value.first)) {
+      auto& o = a.a[*i];
+      bool newly = !o;
+      if (newly) {
+        o.create(std::move(value));
+        ++s;
+      }
+      return {iterator{this, a.begin(), a.end(), &o}, newly};
+    }
+    return {end(), false};
+  }
+
+  constexpr iterator insert(const_iterator, const value_type& value) noexcept {
+    return insert(value).first;
+  }
+
+  constexpr iterator insert(const_iterator, value_type&& value) noexcept {
+    return insert(std::move(value)).first;
+  }
+
+  template<class InputIt>
+  constexpr void insert( InputIt first, InputIt last ) noexcept {
+    while (first != last)
+      insert(*first++);
+  }
+
+  constexpr void insert( std::initializer_list<value_type> ilist ) noexcept {
+    for (auto& v : ilist) {
+      insert(v);
+    }
+  }
+
+  template <class M>
+  constexpr std::pair<iterator, bool> insert_or_assign( const key_type & k, M&& obj ) {
+    if (auto i = index_type{}(k)) {
+      auto& o = a.a[*i];
+      bool newly = !o;
+      if (newly) {
+        o = optional<value_type>{{k, std::forward<M>(obj)}};
+        ++s;
+      } else {
+        o->second = std::forward<M>(obj);
+      }
+      return {iterator{this, a.begin(), a.end(), &o}, newly};
+    }
+    return {end(), false};
+  }
+
+  template <class M>
+  constexpr std::pair<iterator, bool> insert_or_assign( key_type&& k, M&& obj ) {
+    return insert_or_assign(k, std::forward<M>(obj));
+  }
+
+  template <class M>
+  constexpr iterator insert_or_assign(const_iterator, const key_type& k, M&& obj ) {
+    return insert_or_assign(k, std::forward<M>(obj)).first;
+  }
+
+  template <class M>
+  constexpr iterator insert_or_assign(const_iterator, key_type&& k, M&& obj ) {
+    return insert_or_assign(k, std::forward<M>(obj)).first;
+  }
+
+  template< class... Args >
+  constexpr std::pair<iterator,bool> emplace( Args&&... args ) {
+    return insert({std::forward<Args>(args)...});
+  }
+
+  template <class... Args>
+  constexpr iterator emplace_hint( const_iterator hint, Args&&... args ) {
+    return emplace(std::forward<Args>(args)...).first;
+  }
+
+  template< class... Args >
+  constexpr std::pair<iterator, bool> try_emplace( const key_type& k, Args&&... args ) {
+    if (auto i = index_type{}(k)) {
+      auto& o = a.a[*i];
+      bool newly = !o;
+      if (newly) {
+        o = optional<value_type>{{std::piecewise_construct, std::tuple{k},
+                                  std::forward_as_tuple(std::forward<Args>(args)...)}};
+        ++s;
+      }
+      return {iterator{this, a.begin(), a.end(), &o}, newly};
+    }
+    return {end(), false};
+  }
+
+  template< class... Args >
+  constexpr std::pair<iterator, bool> try_emplace( key_type&& k, Args&&... args ) {
+    return try_emplace(k, std::forward<Args>(args)...);
+  }
+
+  template< class... Args >
+  constexpr iterator try_emplace(const_iterator, const key_type& k, Args&&... args ) {
+    return try_emplace(k, std::forward<Args>(args)...).first;
+  }
+
+  template< class... Args >
+  constexpr iterator try_emplace(const_iterator, key_type&& k, Args&&... args ) {
+    return try_emplace(k, std::forward<Args>(args)...).first;
+  }
+
+  constexpr iterator erase( const_iterator pos ) noexcept {
+    iterator oth {this, a.begin(), a.end(),
+                  a.begin() + (pos.current - pos.first)};
+    *oth.current = optional<value_type>{};
+    --s;
+    return ++oth;
+  }
+
+  constexpr iterator erase( const_iterator first, const_iterator last ) noexcept {
+    iterator res;
+    while(first != last) {
+      res = erase(first++);
+    }
+    return res;
+  }
+
+  constexpr size_type erase( const key_type& key ) noexcept {
+    if (auto i = index_type{}(key)) {
+      if (auto &o = a.a[*i]) {
+        o = optional<value_type>{};
+        --s;
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  template<class K, class KC = key_compare>
+  constexpr std::enable_if_t<detail::is_transparent_v<KC>, size_type> erase( K&& x ) noexcept {
+    size_type c{};
+    for (auto [first, last] = detail::equal_range(index_type::values_v->begin(), index_type::values_v->end(), x, key_compare{});
+         first != last; )
+      c += erase(*first++);
+    return c;
+  }
+
+  constexpr void swap (map& other) noexcept(std::is_nothrow_swappable_v<mapped_type>) {
+    auto c = std::move(*this);
+    *this = std::move(other);
+    other = std::move(c);
+  }
+
+  [[nodiscard]] constexpr size_type count(const key_type& key) const noexcept {
+    return index_type{}(key) && a[key];
+  }
+
+  template<typename K, typename KC = key_compare>
+  [[nodiscard]] constexpr std::enable_if_t<detail::is_transparent_v<KC>, size_type> count(const K& x) const {
+    size_type c{};
+    for (auto [first, last] = detail::equal_range(index_type::values_v->begin(), index_type::values_v->end(), x, key_compare{}); first != last; ++first)
+      c += count(*first);
+    return c;
+  }
+
+  [[nodiscard]] constexpr const_iterator find(const key_type & key) const noexcept {
+    if (auto i = index_type{}(key))
+      if (auto& o = a.a[*i])
+        return const_iterator{this, a.begin(),
+                              a.end(), &o};
+    return end();
+  }
+
+  template<class K, typename KC = key_compare>
+  [[nodiscard]] constexpr std::enable_if_t<detail::is_transparent_v<KC>, const_iterator> find(const K& x) const {
+    for (auto [first, last] = detail::equal_range(index_type::values_v->begin(), index_type::values_v->end(), x, key_compare{}); first != last; ++first)
+      if (auto it = find(*first); it != end())
+        return it;
+    return end();
+  }
+
+  [[nodiscard]] constexpr bool contains(const key_type& key) const noexcept {
+    return count(key);
+  }
+
+  template<typename K, typename KC = key_compare>
+  [[nodiscard]] constexpr std::enable_if_t<detail::is_transparent_v<KC>, bool> contains(const K& x) const noexcept {
+    return count(x) > 0;
+  }
+
+  [[nodiscard]] constexpr std::pair<const_iterator,const_iterator> equal_range(const key_type& key) const noexcept {
+    return {lower_bound(key), upper_bound(key)};
+  }
+
+  template<typename K, typename KC = key_compare>
+  [[nodiscard]] constexpr std::enable_if_t<detail::is_transparent_v<KC>, std::pair<const_iterator,const_iterator>> equal_range( const K& x ) const noexcept {
+    return {lower_bound(x), upper_bound(x)};
+  }
+
+  [[nodiscard]] constexpr const_iterator lower_bound( const key_type& key ) const noexcept {
+    if (auto i = index_type{}(key)) {
+      auto& o = a.a[*i];
+      auto it = const_iterator{this, a.begin(),
+                               a.end(),
+                               &o};
+      return o ? it : std::next(it);
+    }
+    return end();
+  }
+
+  template<typename K, typename KC = key_compare>
+  [[nodiscard]] constexpr std::enable_if_t<detail::is_transparent_v<KC>, const_iterator> lower_bound( const K& x ) const noexcept {
+    auto [first, last] = detail::equal_range(index_type::values_v->begin(), index_type::values_v->end(), x, key_compare{});
+    return first != last ? lower_bound(*first) : end();
+  }
+
+  [[nodiscard]] constexpr const_iterator upper_bound( const key_type& key ) const noexcept {
+    if (auto i = index_type{}(key))
+      return std::next(const_iterator{this, a.begin(),
+                                      a.end(),
+                                      &a.a[*i]});
+    return end();
+  }
+
+  template<typename K, typename KC = key_compare>
+  [[nodiscard]] constexpr std::enable_if_t<detail::is_transparent_v<KC>, const_iterator> upper_bound( const K& x ) const noexcept {
+    auto [first, last] = detail::equal_range(index_type::values_v->begin(), index_type::values_v->end(), x, key_compare{});
+    return first != last ? upper_bound(*std::prev(last)) : end();
+  }
+
+  [[nodiscard]] constexpr key_compare key_comp() const {
+    return {};
+  }
+
+  [[nodiscard]] constexpr value_compare value_comp() const {
+    return {};
+  }
+
+  [[nodiscard]] constexpr friend bool operator==(const map& lhs, const map& rhs) noexcept {
+    return lhs.a == rhs.a;
+  }
+
+  [[nodiscard]] constexpr friend bool operator!=(const map& lhs, const map& rhs) noexcept {
+    return lhs.a != rhs.a;
+  }
+
+  [[nodiscard]] constexpr friend bool operator<(const map& lhs, const map& rhs) noexcept {
+    if (lhs.s < rhs.s) return true;
+    if (rhs.s < lhs.s) return false;
+
+    for (auto& e : *index_type::values_v) {
+      if (auto c = rhs.contains(e); c != lhs.contains(e))
+        return c;
+    }
+    return false;
+  }
+
+  [[nodiscard]] constexpr friend bool operator<=(const map& lhs, const map& rhs) noexcept {
+    return !(rhs < lhs);
+  }
+
+  [[nodiscard]] constexpr friend bool operator>(const map& lhs, const map& rhs) noexcept {
+    return rhs < lhs;
+  }
+
+  [[nodiscard]] constexpr friend bool operator>=(const map& lhs, const map& rhs) noexcept {
+    return !(lhs < rhs);
+  }
+
+  template<typename Pred>
+  constexpr size_type erase_if(Pred pred) noexcept {
+    auto old_size = size();
+    for (auto i = begin(), last = end(); i != last; ) {
+      if (pred(*i)) {
+        i = erase(i);
+      } else {
+        ++i;
+      }
+    }
+    return old_size - size();
+  }
+
+private:
+  container_type a;
+  std::size_t s{};
+};
+
 /*
 
 // multiset like API. (Probably delete can invalidate allocators?)
@@ -1253,16 +1848,6 @@ private:
 
 
 // map like API.
-template<typename E, typename V, typename CExprLess = std::less<E>>
-class map {
-  using index_type = detail::indexing<E, CExprLess>;
-public:
-
-  //...
-
-private:
-  array<E, optional<std::pair<const E, V>>, index_type> a;
-};
 
 
 // flat_set (set) like API with contiguous iterator --> can be memcpy'd
@@ -1298,6 +1883,70 @@ private:
 }// namespace magic_enum::containers
 
 namespace std {
+  template< std::size_t I, typename T1, typename T2>
+  constexpr std::enable_if_t<(I < 2), std::conditional_t<I == 0, T1, T2>&> get( magic_enum::containers::pair<T1, T2>& a ) noexcept {
+    if constexpr  (I == 0)
+      return a.first;
+    else
+      return a.second;
+  }
+
+  template< std::size_t I, typename T1, typename T2>
+  constexpr std::enable_if_t<(I < 2), std::conditional_t<I == 0, T1, T2>&&> get( magic_enum::containers::pair<T1, T2>&& a ) noexcept {
+    if constexpr  (I == 0)
+      return std::move(a.first);
+    else
+      return std::move(a.second);
+  }
+
+  template< std::size_t I, typename T1, typename T2>
+  constexpr std::enable_if_t<(I < 2), const std::conditional_t<I == 0, T1, T2>&> get( const magic_enum::containers::pair<T1, T2>& a ) noexcept {
+    if constexpr  (I == 0)
+      return a.first;
+    else
+      return a.second;
+  }
+
+  template< std::size_t I, typename T1, typename T2>
+  constexpr std::enable_if_t<(I < 2), const std::conditional_t<I == 0, T1, T2>&&> get( const magic_enum::containers::pair<T1, T2>&& a ) noexcept {
+    if constexpr  (I == 0)
+      return std::move(a.first);
+    else
+      return std::move(a.second);
+  }
+
+  template<typename T, typename T1, typename T2>
+  constexpr std::enable_if_t<std::is_convertible_v<T1&, T> != std::is_convertible_v<T2&, T>, T> get( magic_enum::containers::pair<T1, T2>& a ) noexcept {
+    if constexpr  (std::is_convertible_v<T1&, T>)
+      return a.first;
+    else
+      return a.second;
+  }
+
+  template<typename T, typename T1, typename T2>
+  constexpr std::enable_if_t<std::is_convertible_v<const T1&, T> != std::is_convertible_v<const T2&, T>, T> get( const magic_enum::containers::pair<T1, T2>& a ) noexcept {
+    if constexpr  (std::is_convertible_v<const T1&, T>)
+      return a.first;
+    else
+      return a.second;
+  }
+
+  template<typename T, typename T1, typename T2>
+  constexpr std::enable_if_t<std::is_convertible_v<T1&&, T> != std::is_convertible_v<T2&&, T>, T> get( magic_enum::containers::pair<T1, T2>&& a ) noexcept {
+    if constexpr  (std::is_convertible_v<T1&&, T>)
+      return std::move(a.first);
+    else
+      return std::move(a.second);
+  }
+
+  template<typename T, typename T1, typename T2>
+  constexpr std::enable_if_t<std::is_convertible_v<const T1&&, T> != std::is_convertible_v<const T2&&, T>, T> get( const magic_enum::containers::pair<T1, T2>&& a ) noexcept {
+    if constexpr  (std::is_convertible_v<const T1&&, T>)
+      return std::move(a.first);
+    else
+      return std::move(a.second);
+  }
+
   template< std::size_t I, typename E, typename V, typename Index>
   constexpr std::enable_if_t<(I < magic_enum::enum_count<E>()), V&> get( magic_enum::containers::array<E, V, Index>& a ) noexcept {
     return a.a[I];
@@ -1345,12 +1994,22 @@ namespace std {
   template<class T>
   struct tuple_size;
 
+  template<typename T1, typename T2>
+  struct tuple_size< magic_enum::containers::pair<T1, T2> > :
+      std::integral_constant<std::size_t, 2> {};
+
   template<typename E, typename V, typename Index>
   struct tuple_size< magic_enum::containers::array<E, V, Index> > :
     std::integral_constant<std::size_t, magic_enum::enum_count<E>()> {};
 
+
   template<std::size_t I, class T>
   struct tuple_element;
+
+  template<std::size_t I, typename T1, typename T2>
+  struct tuple_element< I, magic_enum::containers::pair<T1, T2> > {
+    using type = std::conditional_t<I == 0, T1, T2>;
+  };
 
   template<std::size_t I, typename E, typename V, typename Index>
   struct tuple_element< I, magic_enum::containers::array<E, V, Index> > {
