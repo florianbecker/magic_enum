@@ -162,17 +162,8 @@ namespace detail {
     }
   };
 
-  template<>
-  struct indexing<void, std::less<>, void> {
-    using is_transparent = std::true_type;
-    template<typename E>
-    [[nodiscard]] constexpr inline optional<std::size_t> operator()(E val) const noexcept {
-      return enum_index(val);
-    }
-  };
-
   template<typename Less>
-  struct indexing<void, Less, void> { // other, probably transparent less
+  struct indexing<void, Less, void> {
     using is_transparent = std::true_type;
     template<typename E>
     [[nodiscard]] constexpr inline optional<std::size_t> operator()(E val) const noexcept {
@@ -185,15 +176,6 @@ namespace detail {
            typename OP = std::less<>,
            typename = void>
   struct name_sort_impl {
-    [[nodiscard]] constexpr inline bool operator()(E e1, E e2) const noexcept {
-      return OP{}(enum_name(e1), enum_name(e2));
-    }
-  };
-
-  template<typename E,
-           typename OP>
-  struct name_sort_impl<E, OP, std::enable_if_t<!std::is_void_v<E> && is_transparent_v<OP>>> {
-    using is_transparent = std::true_type;
     [[nodiscard]] constexpr inline bool operator()(E e1, E e2) const noexcept {
       return OP{}(enum_name(e1), enum_name(e2));
     }
@@ -214,10 +196,17 @@ namespace detail {
     };
 
     template<typename E1, typename E2>
-    [[nodiscard]] constexpr inline bool operator()(E1 e1, E2 e2) const noexcept {
+    [[nodiscard]] constexpr inline std::enable_if_t<
+        // at least one of need to be an enum type
+        (std::is_enum_v<std::decay_t<E1>> || std::is_enum_v<std::decay_t<E2>>) &&
+        // if both is enum, only accept if the same enum
+        (!std::is_enum_v<std::decay_t<E1>> || !std::is_enum_v<std::decay_t<E2>> || std::is_same_v<E1, E2>) &&
+        // is invocable with comparator
+        (std::is_invocable_r_v<bool, FullCmp<>,
+                std::conditional_t<std::is_enum_v<std::decay_t<E1>>, string_view, E1>,
+                std::conditional_t<std::is_enum_v<std::decay_t<E2>>, string_view, E2>>), bool> operator()(E1 e1, E2 e2) const noexcept {
       using D1 = std::decay_t<E1>;
       using D2 = std::decay_t<E2>;
-      static_assert(std::is_enum_v<D1> || std::is_enum_v<D2>, "magic_enum::name_sort is not used with enums");
       constexpr FullCmp<> cmp{};
 
       if constexpr (std::is_enum_v<D1> && std::is_enum_v<D2>) {
