@@ -227,17 +227,17 @@ namespace detail {
 
   struct raw_access_t {};
 
-  template<typename Parent, typename Iterator, typename Getter, typename Predicate>
+  template<typename Parent, typename Iterator> //, typename Getter, typename Predicate>
   struct FilteredIterator {
     Parent parent;
     Iterator first;
     Iterator last;
     Iterator current;
-    Getter getter;
-    Predicate predicate;
+//    Getter getter;
+//    Predicate predicate;
 
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = std::remove_reference_t<std::invoke_result_t<Getter, Parent, Iterator>>;
+    using value_type = std::remove_reference_t<Iterator>; //std::remove_reference_t<std::invoke_result_t</*Getter,*/ Iterator, Parent, Iterator>>;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
@@ -249,32 +249,33 @@ namespace detail {
     constexpr FilteredIterator& operator=(FilteredIterator&&) noexcept = default;
 
     template<typename OtherParent, typename OtherIterator, typename = std::enable_if_t<std::is_convertible_v<OtherParent, Parent> && std::is_convertible_v<OtherIterator, Iterator>>*>
-    constexpr explicit FilteredIterator(const FilteredIterator<OtherParent, OtherIterator, Getter, Predicate>& other)
+    constexpr explicit FilteredIterator(const FilteredIterator<OtherParent, OtherIterator>& other) //, Getter, Predicate>& other)
       : parent(other.parent)
       , first(other.first)
       , last(other.last)
       , current(other.current)
-      , getter(other.getter)
-      , predicate(other.predicate)
+//      , getter(other.getter)
+//      , predicate(other.predicate)
     {}
 
     ~FilteredIterator() = default;
 
-    constexpr FilteredIterator(Parent p, Iterator begin, Iterator end, Iterator curr, Getter getter = {}, Predicate pred = {})
+    constexpr FilteredIterator(Parent p, Iterator begin, Iterator end, Iterator curr) //, Getter getter = {}, Predicate pred = {})
         : parent(p)
           , first(std::move(begin))
           , last(std::move(end))
           , current(std::move(curr))
-          , getter{std::move(getter)}
-          , predicate{std::move(pred)}
+//          , getter{std::move(getter)}
+//          , predicate{std::move(pred)}
     {
-      if (current == first && !predicate(parent, current)) {
+      if (current == first) { // && !predicate(parent, current)) {
         ++*this;
       }
     }
 
     [[nodiscard]] constexpr reference operator*() const {
-      return getter(parent, current);
+      return current;
+      //return getter(parent, current);
     }
 
     [[nodiscard]] constexpr pointer operator->() const {
@@ -284,7 +285,7 @@ namespace detail {
     constexpr FilteredIterator& operator++() {
       do {
         ++current;
-      } while(current != last && !predicate(parent, current));
+      } while(current != last); // && !predicate(parent, current));
       return *this;
     }
 
@@ -962,8 +963,8 @@ public:
   using const_reference = const value_type&;
   using pointer = value_type*;
   using const_pointer = const value_type*;
-  using iterator = detail::FilteredIterator<const set*, const E*, Getter, Predicate>;
-  using const_iterator = detail::FilteredIterator<const set*, const E*, Getter, Predicate>;
+  using iterator = detail::FilteredIterator<const set*, const E*>;//, Getter, Predicate>;
+  using const_iterator = detail::FilteredIterator<const set*, const E*>;//, Getter, Predicate>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 

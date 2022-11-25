@@ -262,7 +262,7 @@ TEST_CASE("containers_set") {
   REQUIRE_FALSE(magic_enum::enum_count<Color>() == color_set.size());
 
   // BUG: Will not work on msvc
-#ifndef _WIN32
+//#ifndef _WIN32
   color_set.insert(Color::RED);
   // color_set.insert({{Color::RED, Color::GREEN}});
   std::ignore = color_set.insert(Color::RED);
@@ -278,10 +278,10 @@ TEST_CASE("containers_set") {
   REQUIRE(color_set.size() == 3);
   REQUIRE(magic_enum::enum_count<Color>() == color_set.size());
 
-  for (auto color : color_set) {
+  /*for (auto color : color_set) {
 
     std::cout << color << std::endl;
-  }
+  }*/
 
   // std::sort(std::begin(color_set), std::end(color_set));
 
@@ -290,10 +290,10 @@ TEST_CASE("containers_set") {
   color_set_compare.insert(Color::RED);
   color_set_compare.insert(Color::GREEN);
 
-  for (auto color : color_set_compare) {
+  /* for (auto color : color_set_compare) {
 
     std::cout << color << std::endl;
-  }
+  } */
 
   constexpr magic_enum::containers::set color_set_filled {Color::RED, Color::GREEN, Color::BLUE};
   REQUIRE_FALSE(color_set_filled.empty());
@@ -308,7 +308,7 @@ TEST_CASE("containers_set") {
   REQUIRE(color_set_not_const.empty());
   REQUIRE(color_set_not_const.size() == 0);
   REQUIRE_FALSE(magic_enum::enum_count<Color>() == color_set_not_const.size());
-#endif
+//#endif
 }
 
 TEST_CASE("containers_flat_set") {
