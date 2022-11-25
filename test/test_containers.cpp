@@ -83,16 +83,16 @@ TEST_CASE("containers_array") {
   constexpr auto colors = magic_enum::enum_values<Color>();
   for (auto color : colors) {
 
-    std::cout << "Key=" << color << " Value=" << static_cast<std::uint32_t>(compare_before[color]) << std::endl;
+    std::cout << "array: " << "Key=" << color << " Value=" << static_cast<std::uint32_t>(compare_before[color]) << std::endl;
   }
 
-  std::cout << static_cast<std::uint32_t>(std::get<0>(compare_before)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<1>(compare_before)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<2>(compare_before)) << std::endl;
+  std::cout << "array: "<< static_cast<std::uint32_t>(std::get<0>(compare_before)) << std::endl;
+  std::cout << "array: "<< static_cast<std::uint32_t>(std::get<1>(compare_before)) << std::endl;
+  std::cout << "array: "<< static_cast<std::uint32_t>(std::get<2>(compare_before)) << std::endl;
 
-  std::cout << static_cast<std::uint32_t>(std::get<Color::RED>(compare_before)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<Color::GREEN>(compare_before)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<Color::BLUE>(compare_before)) << std::endl;
+  std::cout << "array: "<< static_cast<std::uint32_t>(std::get<Color::RED>(compare_before)) << std::endl;
+  std::cout << "array: "<< static_cast<std::uint32_t>(std::get<Color::GREEN>(compare_before)) << std::endl;
+  std::cout << "array: "<< static_cast<std::uint32_t>(std::get<Color::BLUE>(compare_before)) << std::endl;
 
   REQUIRE(std::make_pair(colors[0], color_rgb_container_int[colors[0]]) == std::make_pair<Color, std::uint8_t>(Color::RED, 1U));
   REQUIRE(std::make_pair(colors[1], color_rgb_container_int[colors[1]]) == std::make_pair<Color, std::uint8_t>(Color::GREEN, 4U));
@@ -107,16 +107,16 @@ TEST_CASE("containers_array") {
 
   for (auto color : colors) {
 
-    std::cout << "Key=" << color << " Value=" << static_cast<std::uint32_t>(compare_after[color]) << std::endl;
+    std::cout << "array: " << "Key=" << color << " Value=" << static_cast<std::uint32_t>(compare_after[color]) << std::endl;
   }
 
-  std::cout << static_cast<std::uint32_t>(std::get<0>(compare_after)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<1>(compare_after)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<2>(compare_after)) << std::endl;
+  std::cout << "array: " << static_cast<std::uint32_t>(std::get<0>(compare_after)) << std::endl;
+  std::cout << "array: " << static_cast<std::uint32_t>(std::get<1>(compare_after)) << std::endl;
+  std::cout << "array: " << static_cast<std::uint32_t>(std::get<2>(compare_after)) << std::endl;
 
-  std::cout << static_cast<std::uint32_t>(std::get<Color::RED>(compare_after)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<Color::GREEN>(compare_after)) << std::endl;
-  std::cout << static_cast<std::uint32_t>(std::get<Color::BLUE>(compare_after)) << std::endl;
+  std::cout << "array: " << static_cast<std::uint32_t>(std::get<Color::RED>(compare_after)) << std::endl;
+  std::cout << "array: " << static_cast<std::uint32_t>(std::get<Color::GREEN>(compare_after)) << std::endl;
+  std::cout << "array: " << static_cast<std::uint32_t>(std::get<Color::BLUE>(compare_after)) << std::endl;
 
   REQUIRE(std::make_pair(colors[0], color_rgb_container_int[colors[0]]) == std::make_pair<Color, std::uint8_t>(Color::RED, 1U));
   REQUIRE(std::make_pair(colors[1], color_rgb_container_int[colors[1]]) == std::make_pair<Color, std::uint8_t>(Color::GREEN, 2U));
@@ -168,7 +168,7 @@ TEST_CASE("containers_array") {
 
   for (auto color : colors) {
 
-    std::cout << "Key=" << color << " Value=" << color_rgb_container[color] << std::endl;
+    std::cout << "array: " << "Key=" << color << " Value=" << color_rgb_container[color] << std::endl;
   }
 
   constexpr auto from_to_array = magic_enum::containers::to_array<Color, RGB>({{color_max, 0, 0}, {0, color_max, 0}, {0, 0, color_max}});
@@ -248,7 +248,7 @@ TEST_CASE("containers_bitset") {
   REQUIRE(color_bitset_red_green.any());
   REQUIRE_FALSE(color_bitset_red_green.none());
 
-  std::cout << magic_enum::enum_flags_name(Color::GREEN | Color::RED) << std::endl;
+  std::cout << "bitset: " << magic_enum::enum_flags_name(Color::GREEN | Color::RED) << std::endl;
 }
 
 TEST_CASE("containers_set") {
@@ -264,7 +264,6 @@ TEST_CASE("containers_set") {
   // BUG: Will not work on msvc
 //#ifndef _WIN32
   color_set.insert(Color::RED);
-  // color_set.insert({{Color::RED, Color::GREEN}});
   std::ignore = color_set.insert(Color::RED);
   color_set.insert(Color::GREEN);
   color_set.insert(Color::BLUE);
@@ -278,10 +277,10 @@ TEST_CASE("containers_set") {
   REQUIRE(color_set.size() == 3);
   REQUIRE(magic_enum::enum_count<Color>() == color_set.size());
 
-  /*for (auto color : color_set) {
+  for (auto color : color_set) {
 
-    std::cout << color << std::endl;
-  }*/
+    std::cout << "set: " << color << std::endl;
+  }
 
   // std::sort(std::begin(color_set), std::end(color_set));
 
@@ -290,10 +289,10 @@ TEST_CASE("containers_set") {
   color_set_compare.insert(Color::RED);
   color_set_compare.insert(Color::GREEN);
 
-  /* for (auto color : color_set_compare) {
+  for (auto color : color_set_compare) {
 
-    std::cout << color << std::endl;
-  } */
+    std::cout << "set: " << color << std::endl;
+  }
 
   constexpr magic_enum::containers::set color_set_filled {Color::RED, Color::GREEN, Color::BLUE};
   REQUIRE_FALSE(color_set_filled.empty());
@@ -326,7 +325,7 @@ TEST_CASE("map_like_container") {
   std::vector<std::pair<Color, RGB>> map {{Color::GREEN, {0, color_max, 0}}, {Color::BLUE, {0, 0, color_max}}, {Color::RED, {color_max, 0, 0}}};
   for (auto [key, value] : map) {
 
-    std::cout << "Key=" << key << " Value=" << value << std::endl;
+    std::cout << "map_like: " << "Key=" << key << " Value=" << value << std::endl;
   }
   auto compare = [](std::pair<Color, RGB>& lhs,
                     std::pair<Color, RGB>& rhs) {
@@ -335,6 +334,6 @@ TEST_CASE("map_like_container") {
   std::sort(std::begin(map), std::end(map), compare);
   for (auto [key, value] : map) {
 
-    std::cout << "Key=" << key << " Value=" << value << std::endl;
+    std::cout << "map_like: " << "Key=" << key << " Value=" << value << std::endl;
   }
 }
